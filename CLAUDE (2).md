@@ -71,13 +71,40 @@ Si je te donne un screenshot d'inspiration, applique la boucle screenshot-compar
 
 Si pas de site d'inspiration, ignore cette étape et applique directement les standards SKYPEO.
 
-### Étape 4 — Déploiement Vercel
+### Étape 4 — Déploiement (monorepo GitHub + Vercel automatisé)
 
-Une fois le mockup validé, déploie sur Vercel :
-- Initialise le projet Vercel (`vercel` en CLI)
-- Vercel détecte automatiquement le `index.html` statique
-- Renomme le projet pour avoir une URL parlante : `[nom-entreprise]-skypeo.vercel.app`
-- Confirme avec moi avant de passer en production (`vercel --prod`)
+**Setup en place — 100% automatisé. Aucune action sur Vercel après l'étape de création de la maquette :**
+- Le dossier `C:\Users\timot\template-site-skypeo` est un repo git, branche `main`, remote `origin` = `https://github.com/TTRDM54/template-site-skypeo.git`
+- **Un seul projet Vercel** est connecté à ce repo, Root Directory = racine du repo
+- À la racine : `vercel.json` (`cleanUrls: true`, `trailingSlash: true`) + un `index.html` privé `noindex` qui sert de placeholder
+- `.gitignore` racine exclut `node_modules`, `.vercel`, `*.log`, `.env*`, `.DS_Store`
+- Chaque prospect = un sous-dossier (ex. `Sunest/`, `Plomberie-Dupont/`) avec son `index.html` + sa `hero-animation.mp4`
+- L'utilisateur travaille sous **Git Bash sur Windows**
+
+**Workflow pour chaque nouvelle maquette — 3 commandes, fin :**
+
+1. Créer le sous-dossier `[NomProspect]/` avec `index.html` + la vidéo hero (placée par le user)
+2. Donner au user les commandes à coller dans Git Bash :
+   ```bash
+   cd /c/Users/timot/template-site-skypeo
+   git add [NomProspect]/
+   git commit -m "feat: maquette [NomProspect] - [metier] [ville]"
+   git push
+   ```
+3. **Vercel auto-déploie** sous 30 secondes. URL finale : `template-site-skypeo.vercel.app/[NomProspect]/`
+4. Donner cette URL au user — c'est ce qu'il enverra au prospect via WhatsApp.
+
+**Aucune intervention sur Vercel n'est jamais requise.** Pas de nouveau projet, pas de réglage de Root Directory, pas de naming.
+
+**Ne jamais init un git dans un sous-dossier prospect** — le `.git` vit uniquement à la racine du monorepo. Si `.git/index.lock` traîne : `rm -f .git/index.lock` avant le commit.
+
+**Convention de nommage** : sous-dossier = nom commercial PascalCase ou tel-quel (`Sunest`, `LT-Services`, `Plomberie-Dupont`). L'URL Vercel reprend ce nom à l'identique.
+
+**Conséquences pour le HTML d'une maquette** :
+- Les chemins relatifs (`<source src="hero-animation.mp4">`, `href="#contact"`) fonctionnent parce que `trailingSlash: true` les résout sous `/[NomProspect]/...`
+- Toujours utiliser des chemins **relatifs**, jamais absolus avec `/` initial pour les assets locaux
+- Les URLs externes (Tailwind CDN, Google Fonts, photos sur sunest.fr...) sont toujours en absolu `https://`, aucun problème
+- L'`og:url` doit pointer vers l'URL Vercel finale (`https://template-site-skypeo.vercel.app/[NomProspect]/`)
 
 ## Standards Visuels SKYPEO
 
@@ -91,6 +118,11 @@ Un seul accent de couleur par site, jamais deux.
 - **Paysagiste** : vert profond `#15803D`
 - **Peintre / décorateur** : bleu nuit `#1E3A8A` ou bordeaux `#991B1B`
 - **Multi-services / général** : gris anthracite `#1F2937` + accent doré `#CA8A04`
+- **Solaire / photovoltaïque** : bleu ciel `#0EA5E9` (accent principal) + jaune solaire `#FACC15` (highlight, étoiles, soleil)
+
+**Exception double-couleur** : le métier solaire/photovoltaïque autorise un duo bleu ciel + jaune (le jaune reste un accent secondaire très ponctuel : un mot du H1, le soleil du logo, les étoiles, jamais un bouton). Pour tous les autres métiers, la règle « une seule couleur d'accent » s'applique strictement.
+
+**Si le métier du prospect n'est pas dans cette liste**, demande à l'utilisateur quelle palette appliquer en proposant une recommandation basée sur le site source (analyse les couleurs dominantes via web_fetch).
 
 ### Couleurs neutres
 
@@ -127,7 +159,9 @@ Un seul accent de couleur par site, jamais deux.
 
 ## Intégration Vidéo Hero
 
-Le fichier `hero-animation.mp4` est placé à la racine du projet par mes soins (généré séparément sur Higgsfield/Kling).
+Le fichier `hero-animation.mp4` est placé dans le sous-dossier du prospect par mes soins (généré séparément sur Higgsfield/Kling).
+
+**Vérifier le nom de fichier au début** — le user uploade parfois `hero-animation.mp4.mp4` (double extension Windows). Si tu détectes ça, renomme-le silencieusement avant d'écrire le HTML : `mv hero-animation.mp4.mp4 hero-animation.mp4`.
 
 Spécifications HTML à respecter :
 
@@ -197,6 +231,44 @@ Ne jamais inventer un SIRET. Mettre `[SIRET à renseigner]` ou ne pas l'afficher
 - **Toujours mobile-first** : tester la version mobile avant la desktop
 - **Une seule animation 3D hero par mockup** pour ne pas alourdir
 - **Si le prospect a un Solocal existant** : le mockup doit clairement faire mieux visuellement, c'est l'argument de vente
+
+## Patterns réutilisables
+
+### Mock widget Google Reviews
+
+Quand le prospect a des avis Google publics (recommandé : présent sur sa fiche Google Business), intègre un faux widget qui imite l'embed Google. Aucune dépendance externe, conforme aux règles SKYPEO.
+
+Composants visuels obligatoires :
+- Logo Google « G » en SVG inline 4 couleurs (`#4285F4`, `#34A853`, `#FBBC05`, `#EA4335`)
+- Score sur 5 en chiffre énorme (ex. `4,8 / 5`), centré
+- Rangée de 5 étoiles couleur jaune solaire `#FACC15`
+- Badge « ✓ Vérifiés » vert (`bg-emerald-50 text-emerald-700`)
+- Mention « Basé sur + de N avis » avec le vrai nombre récupéré sur la fiche Google
+- CTA « Voir tous les avis sur Google » → lien `target="_blank" rel="noopener"` vers la **vraie URL Google search** du prospect (à demander au user, ou récupérée via web_fetch)
+
+Sous le widget : grille de 3 cartes de témoignages verbatim (avis Google publics, on garde les vrais noms — c'est de la donnée publique). Chaque carte a un avatar circulaire avec initiales sur fond accent + le mini-G + mention « Avis Google vérifié ».
+
+### Hero full-background vidéo (standard)
+
+Vidéo en `absolute inset-0 w-full h-full object-cover` qui couvre toute la section hero (`h-screen min-h-[640px]`). Overlay double : un dégradé sombre vertical `from-black/55 via-black/25 to-black/70` pour la lisibilité, plus une teinte couleur accent sur les côtés pour ancrer la palette. Texte blanc, `drop-shadow-2xl` sur le H1.
+
+**Ne pas tenter de variantes** (vidéo masquée centrée, mask gradient inward...) à moins que l'utilisateur le demande explicitement.
+
+### Header transparent au top → opaque au scroll
+
+Le header est `bg-transparent` sur le hero, puis bascule en blanc opaque dès qu'on scroll de 40px. Classe `.nav-scrolled` ajoutée par un petit script vanilla JS au bas du body. Liens nav passent du blanc au sombre via la même classe.
+
+### Ordre des sections recommandé pour bâtiment / TPE locales
+
+1. Hero
+2. Équipe / portraits (carousel marquee infini) — ancre la confiance
+3. Avis Google (mock widget + 3 cartes)
+4. Services (3-4 cartes)
+5. Pourquoi nous (4 piliers + photo équipe)
+6. Contact (fond noir, formulaire visuel + tel cliquable)
+7. Footer
+
+Alternance des fonds : vidéo → gris `#FAFAFA` → blanc → gris → blanc → noir `#0A0A0A`.
 
 ## Si tu fais une erreur récurrente
 
